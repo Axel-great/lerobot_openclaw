@@ -7,50 +7,58 @@
 - 固件更新 (通过 SFWriteTool)
 - 序列号生成和写入 (通过 ChangeDeviceInfo)
 - 摄像头功能测试
+- 支持数据库/无数据库模式
 - 批量处理支持
 
 ## 依赖
 
 ```bash
-pip install pyserial opencv-python pyusb pyautogui pywin32
+pip install opencv-python pymysql
 ```
 
 ## 使用方法
 
-### 增强版 (推荐)
+### 无数据库模式 (默认)
 
 ```bash
-# 指定固件文件
-python camera_programmer_enhanced.py -f "KD-SPCA2281B5+GC2083-1920x1080-30-15fps-F-N-Q65-XH-260128-NOMIC.bin"
-
-# 批量处理
-python camera_programmer_enhanced.py --count 10
+python usb_camera_programmer_simple.py
+# 或批量
+python usb_camera_programmer_simple.py --batch
 ```
 
-### GUI 版本
+### 数据库模式
 
 ```bash
-python camera_programmer_gui.py
+# 使用本地数据库
+python usb_camera_programmer_simple.py --db
+
+# 使用远程数据库
+python usb_camera_programmer_simple.py --db --host 192.168.1.100 --user root --password 123456
 ```
 
-### 命令行版本
+### 命令行参数
 
-```bash
-python camera_programmer.py --mode single
+| 参数 | 说明 | 默认值 |
+|------|------|--------|
+| `--db` | 启用数据库模式 | 无数据库 |
+| `--host` | 数据库地址 | localhost |
+| `--port` | 数据库端口 | 3306 |
+| `--user` | 数据库用户名 | root |
+| `--password` | 数据库密码 | (空) |
+| `--database` | 数据库名称 | camera_db |
+| `--batch` | 批量模式 | 单个 |
+| `--firmware` | 固件文件 | FIRMWARE_FILE |
+
+## 数据库表结构
+
+```sql
+CREATE TABLE cameras (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    序列号 VARCHAR(50) NOT NULL,
+    固件版本 VARCHAR(20),
+    创建时间 DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 ```
-
-## SFWriteTool 操作流程
-
-根据文档，SFWriteTool 需要按以下步骤操作：
-
-1. **打开 SFWriteTool.exe**
-2. **点击下方三个点** (菜单按钮)
-3. **进入资源加载器**
-4. **选择固件文件**:
-   ```
-   KD-SPCA2281B5+GC2083-1920x1080-30-15fps-F-N-Q65-XH-260128-NOMIC.bin
-   ```
-5. 等待固件更新完成
 
 ## 序列号规则
 
@@ -60,56 +68,8 @@ python camera_programmer.py --mode single
 - MM: 月份
 - NNN: 当月序列号 (001-999)
 
-## 操作流程
+### 无数据库模式
+使用时间戳生成序号: `JYU2C-2083-YYMM{timestamp%1000}`
 
-1. 启动程序
-2. 插入摄像头
-3. 程序自动:
-   - 识别设备
-   - 更新固件
-   - 写入序列号
-   - 测试功能
-4. 拔出摄像头
-5. 重复步骤 2-4
-
-## 核验项
-
-### 固件更新
-- [x] Device 显示 "USB 2.0 Camera"
-- [x] VID: 1BCF, PID: 2281
-- [x] Log 显示 "Download complete"
-- [x] Bcd 从 1103 变为 0128
-
-### 序列号写入
-- [x] Log 显示 "Update success"
-- [x] iManufacturer = "JoyandAI"
-- [x] iProduct = "JYU2C-2083"
-- [x] iSerialNumber = 新序列号
-
-### 功能测试
-- [x] 支持 YUY2/MJPG 格式
-- [x] 30 帧图像正常
-- [x] 非全黑/全白
-
-## 文件说明
-
-```
-usb_camera_programmer/
-├── camera_programmer.py           # 命令行版本
-├── camera_programmer_enhanced.py # 增强版 (推荐)
-├── camera_programmer_gui.py      # GUI 版本
-└── README.md                     # 说明文档
-```
-
-## 固件文件
-
-```
-KD-SPCA2281B5+GC2083-1920x1080-30-15fps-F-N-Q65-XH-260128-NOMIC.bin
-```
-
-## 注意事项
-
-1. 需要 Windows 系统
-2. 需要安装 SFWriteTool 和 ChangeDeviceInfo 工具
-3. 需要管理员权限运行
-4. 批量处理时需要数据库支持序列号查询
+### 数据库模式
+从数据库查询最大序号+1
